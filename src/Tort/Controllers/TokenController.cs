@@ -62,7 +62,7 @@ namespace Tort.Controllers
 
             foreach (var c in user.Claims)
             {
-                claims.Add(c.ToClaim());
+                claims.Add(new Claim(c.ClaimType,c.ClaimValue));
             }
             foreach (var r in await _userManager.GetRolesAsync(user))
             {
