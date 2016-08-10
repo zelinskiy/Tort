@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Tort.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Claims;
+using System.Net.WebSockets;
+using System.Threading;
 
 namespace Tort
 {
@@ -148,7 +150,8 @@ namespace Tort
             app.UseJwtBearerAuthentication(opts);
 
             app.UseCors("MyPolicy");
-
+            
+            
             app.UseMvc();
         }
     }
