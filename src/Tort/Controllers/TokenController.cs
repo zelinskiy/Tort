@@ -8,6 +8,9 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Tort.Models.TokenJsonModels;
+using Newtonsoft.Json;
+using System.Linq;
 
 namespace Tort.Controllers
 {
@@ -30,14 +33,20 @@ namespace Tort.Controllers
 
         //api/token
         [HttpPost]
-        public async Task<IActionResult> Token([FromBody] dynamic model)
+        public async Task<IActionResult> Token([FromBody]TokenJsonModel model)
         {
-            string username = model.UserName;
-            string password = model.Password;
-
             var responce = new Dictionary<string, string>();
+            
+            if (!ModelState.IsValid)
+            {                
+                responce.Add("error", JsonConvert.SerializeObject(ModelState.Root.Errors.Select(e =>e.Exception+":"+e.ErrorMessage)));
+                return Json(responce);
+            }
 
-            var identity = await _signInManager.PasswordSignInAsync(username, password, false, lockoutOnFailure: false);
+            string email = model.Email;
+            string password = model.Password;            
+
+            var identity = await _signInManager.PasswordSignInAsync(email, password, false, lockoutOnFailure: false);
             if (identity == null)
             {
                 responce.Add("error", "user not found");
@@ -48,13 +57,13 @@ namespace Tort.Controllers
                 responce.Add("error", "incorrect login data");
                 return Json(responce);
             }
-            var user = await _userManager.FindByNameAsync(username);
+            var user = await _userManager.FindByNameAsync(email);
 
 
             var now = DateTime.UtcNow;
             var claims = new List<Claim>()
             {
-                new Claim(JwtRegisteredClaimNames.Sub, username),
+                new Claim(JwtRegisteredClaimNames.Sub, email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, ToUnixEpochDate(now).ToString(), ClaimValueTypes.Integer64),
                 new Claim("myClaimType", "myClaimValue")

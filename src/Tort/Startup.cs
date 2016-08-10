@@ -15,6 +15,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Tort.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Security.Claims;
 
 namespace Tort
 {
@@ -88,6 +90,64 @@ namespace Tort
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
+            var logger = loggerFactory.CreateLogger("Tokens");
+
+            app.UseStaticFiles();
+            app.UseIdentity();
+
+
+            //Setting our tokens validator
+            var tokenparams = new TokenValidationParameters()
+            {
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration["TokenSigningKey"])),
+                ValidIssuer = Configuration["Tokens:Issuer"],
+                ValidateLifetime = true,
+                SaveSigninToken = false,
+                RequireExpirationTime = true,
+                ClockSkew = TimeSpan.Zero,
+                LifetimeValidator = ((DateTime? notBefore,
+                    DateTime? expires,
+                    SecurityToken securityToken,
+                    TokenValidationParameters validationParameters) =>
+                !(expires.Value < DateTime.UtcNow)),
+            };
+
+
+            var opts = new JwtBearerOptions()
+            {
+                TokenValidationParameters = tokenparams,
+                AutomaticAuthenticate = true,
+                AutomaticChallenge = true,
+                Audience = Configuration["Tokens:Audience"],
+
+                Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        logger.LogError("Authentication failed.", context.Exception);
+                        return Task.FromResult(0);
+                    },
+                    OnTokenValidated = context =>
+                    {
+
+                        if (context.SecurityToken.ValidTo < DateTime.UtcNow)
+                        {
+                            return Task.FromResult(0);
+                        }
+                        var claimsIdentity = context.Ticket.Principal.Identity as ClaimsIdentity;
+                        claimsIdentity.AddClaim(new Claim("id_token",
+                            context.Request.Headers["Authorization"][0].Substring(context.Ticket.AuthenticationScheme.Length + 1)));
+
+                        // OPTIONAL: you can read/modify the claims that are populated based on the JWT
+                        // claimsIdentity.AddClaim(new Claim(ClaimTypes.Name, claimsIdentity.FindFirst("name").Value));
+                        return Task.FromResult(0);
+                    }
+                }
+            };
+
+            app.UseJwtBearerAuthentication(opts);
+
+            app.UseCors("MyPolicy");
 
             app.UseMvc();
         }

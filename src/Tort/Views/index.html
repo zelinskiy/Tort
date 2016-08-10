@@ -3,8 +3,181 @@
 <head>
     <meta charset="utf-8" />
     <title>Tort</title>
+    <script src="https://code.jquery.com/jquery-3.1.0.min.js" 
+            integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" 
+            crossorigin="anonymous"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <script>
+
+        var root = "http://localhost:5000/api";
+
+        function login() {
+            $.ajax({
+                type:"POST",
+                url:root+"/token",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    Email: $("#emailInput").val(),
+                    Password: $("#passwordInput").val()
+                }),
+                success: function (data) {
+                    console.log(data);
+                    token = data.token;
+                    $.cookie("token", data.token, { valid_to: data.valid_to });
+                }
+            })
+        }
+
+        function register() {
+            $.ajax({
+                type: "POST",
+                url: root + "/profile/register",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    Email: $("#emailInput").val(),
+                    Password: $("#passwordInput").val()
+                }),
+                success: function (data) {
+                    console.log(data);                    
+                }
+            })
+        }
+
+        function loadCurrentGame() {
+            $.get({
+                url: root + "/game/current",
+                headers: {
+                    'Authorization': 'Bearer ' + $.cookie("token")
+                },
+                success: function (data) {
+                    showGames(new Array(JSON.parse(data)));
+                }
+            })
+        }
+
+        function loadGames() {
+            $.get({
+                url: root + "/game/all",
+                headers: {
+                    'Authorization': 'Bearer ' + $.cookie("token")
+                },
+                success: function (data) {
+                    console.log(data);
+                    showGames(JSON.parse(data.Games));
+                }
+            })
+        }
+
+        function showGames(games) {
+            console.log(games)            
+            var root = document.getElementById("gamesList");
+            root.innerHTML = "";
+            
+            if (games[0] === null) return;
+            for (var i = 0; i < games.length ; i++){
+                var game = games[i];
+                var tag = document.createElement("p");
+                tag.id = "game" + game.Id;
+                tag.innerHTML = game.Id
+                    + " : " + game.Name
+                    + " : " + game.Condition
+                    + " : " + game.Author.UserName
+                    + " : " + "<button onclick=\"getQuestions(" + game.Id + ")\">SHOW QUESTIONS</button>"
+                    + " : " + "<button onclick=\"newQuestion(" + game.Id + ")\">QUESTION</button>"
+                    + " : " + "<div id=\"gameQuestions" + game.Id + "\"></div>";
+                root.appendChild(tag);
+            }
+        }
+
+        function newQuestion(gid) {
+            var question = prompt("Your question:");
+            $.post({
+                url: root + "/game/" + gid + "/questions/new",
+                headers: {
+                    'Authorization': 'Bearer ' + $.cookie("token")
+                },
+                contentType: "application/json",
+                data: JSON.stringify({
+                    Text: question,
+                    GameId: gid
+                }),
+                success: function (data) {
+                    console.log(data);                    
+                }
+            })
+        }
+
+
+        function getQuestions(gid) {
+            $.get({
+                url: root + "/game/"+gid+"/questions/all",
+                headers: {
+                    'Authorization': 'Bearer ' + $.cookie("token")
+                },
+                success: function (data) {
+                    console.log(data);
+                    showQuestions(gid, JSON.parse(data.Questions));
+                }
+            })
+        }
+
+        function showQuestions(gid, questions){
+            var root = document.getElementById("gameQuestions" + gid);
+            root.innerHTML = "";
+            root.style.marginLeft = "70px";
+
+            for (var i = 0; i < questions.length; i++) {
+                var q = questions[i];
+                var tag = document.createElement("p");
+                tag.id = "question" + q.Id;
+                tag.innerHTML = q.Text
+                    + " : " + q.State;
+                root.appendChild(tag);
+            }
+
+            gameRoot.appendChild(root);
+
+
+        }
+
+
+        function newGame() {
+            $.post({
+                url: root + "/game/new",
+                headers: {
+                    'Authorization': 'Bearer ' + $.cookie("token")
+                },
+                contentType: "application/json",
+                data: JSON.stringify({
+                    Name: $("#gameNameInput").val(),
+                    Condition: $("#gameConditionInput").val()
+                }),
+                success: function (data) {
+                    console.log(data);
+                }
+            })
+        }
+
+    </script>
+
 </head>
 <body>
+    <input type="text" id="emailInput" value="user1" />
+    <input type="text" id="passwordInput" value="p" />
+    <button onclick="login()">Login</button>
+    <button onclick="register()">Register</button>
+    <hr />
+    <input type="text" id="gameNameInput" value="Game" />
+    <input type="text" id="gameConditionInput" value="Condition" />
+    <button onclick="newGame()">Add Game</button>
+    <hr />
+    <button onclick="loadGames()">GAMES</button>
+    <button onclick="loadCurrentGame()">My Game</button>
+    <hr />
+    <div id="gamesList"></div>
 
+    <script>
+        loadGames();
+    </script>
 </body>
 </html>
