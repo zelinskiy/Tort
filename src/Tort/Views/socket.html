@@ -27,7 +27,7 @@
     </form>
     <script>
         var kek = "localhost:5000";
-        (function () {
+        function f() {
             var webSocketProtocol = location.protocol == "https:" ? "wss:" : "ws:";
             var webSocketURI = webSocketProtocol + "//" + kek + "/ws";
             socket = new WebSocket(webSocketURI);
@@ -55,7 +55,8 @@
                 message.value = '';
                 return false;
             };
-        })();
+        }
+        f();
     </script>
 </body>
 </html>

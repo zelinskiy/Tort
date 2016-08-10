@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Claims;
 using System.Net.WebSockets;
 using System.Threading;
+using Tort.Middleware;
 
 namespace Tort
 {
@@ -154,6 +155,7 @@ namespace Tort
 
             //*******************************POLICE LINE DO NOT CROSS********************************************
             app.UseWebSockets();
+            app.Map("/ws", SocketHandler.Map);
             /*
             app.Map("/ws", builder =>
             {
