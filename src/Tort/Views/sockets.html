@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Echo Example</title>
+
+    <style>
+        html, body, form, input {
+            margin: 0px;
+            padding: 0px;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        input {
+            display: block;
+            text-align: center;
+            font-size: 24px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <form id="form">
+        <input id="message" autocomplete="off" />
+    </form>
+    <script>
+        (function () {
+            var webSocketProtocol = location.protocol == "https:" ? "wss:" : "ws:";
+            var webSocketURI = webSocketProtocol + "//" + location.host + "/ws";
+            socket = new WebSocket(webSocketURI);
+            socket.onopen = function () {
+                console.log("Connected.");
+            };
+            socket.onclose = function (event) {
+                if (event.wasClean) {
+                    console.log('Disconnected.');
+                } else {
+                    console.log('Connection lost.'); // for example if server processes is killed
+                }
+                console.log('Code: ' + event.code + '. Reason: ' + event.reason);
+            };
+            socket.onmessage = function (event) {
+                console.log("Data received: " + event.data);
+            };
+            socket.onerror = function (error) {
+                console.log("Error: " + error.message);
+            };
+            var form = document.getElementById('form');
+            var message = document.getElementById('message');
+            form.onsubmit = function () {
+                socket.send(message.value);
+                message.value = '';
+                return false;
+            };
+        })();
+    </script>
+</body>
+</html>

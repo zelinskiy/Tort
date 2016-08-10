@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Tort.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Claims;
+using Tort.Middleware;
+using System.Net.WebSockets;
 
 namespace Tort
 {
@@ -81,6 +83,8 @@ namespace Tort
 
             services.AddCors(options => options.AddPolicy("MyPolicy", policy));
 
+            
+
             // Add framework services.
             services.AddMvc();
         }
@@ -92,6 +96,7 @@ namespace Tort
             loggerFactory.AddDebug();
             var logger = loggerFactory.CreateLogger("Tokens");
 
+            app.UseDefaultFiles();
             app.UseStaticFiles();
             app.UseIdentity();
 
@@ -148,6 +153,8 @@ namespace Tort
             app.UseJwtBearerAuthentication(opts);
 
             app.UseCors("MyPolicy");
+            
+            app.Map("/ws", SocketHandler.Map);            
 
             app.UseMvc();
         }

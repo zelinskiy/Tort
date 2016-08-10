@@ -82,10 +82,12 @@
                     + " : " + game.Name
                     + " : " + game.Condition
                     + " : " + game.Author.UserName
+                    + " : " + game.IsActive
                     + " : " + "<button onclick=\"getQuestions(" + game.Id + ")\">SHOW QUESTIONS</button>"
                     + " : " + "<button onclick=\"newQuestion(" + game.Id + ")\">QUESTION</button>"
                     + " : " + "<div id=\"gameQuestions" + game.Id + "\"></div>";
-                root.appendChild(tag);
+                if (game.IsActive) root.appendChild(tag);
+                
             }
         }
 
@@ -116,12 +118,12 @@
                 },
                 success: function (data) {
                     console.log(data);
-                    showQuestions(gid, JSON.parse(data.Questions));
+                    showQuestions(gid, JSON.parse(data.Questions), data.IsMyGame);
                 }
             })
         }
 
-        function showQuestions(gid, questions){
+        function showQuestions(gid, questions, ismygame) {
             var root = document.getElementById("gameQuestions" + gid);
             root.innerHTML = "";
             root.style.marginLeft = "70px";
@@ -132,12 +134,18 @@
                 tag.id = "question" + q.Id;
                 tag.innerHTML = q.Text
                     + " : " + q.State;
+
+                if (ismygame) {
+                    tag.innerHTML = tag.innerHTML
+                    + " : " + "<button onclick=\"setQuestionState(" + gid + "," + q.Id + ",1)\">YES</button>"
+                    + " : " + "<button onclick=\"setQuestionState(" + gid + "," + q.Id + ",2)\">NO MATTER</button>"
+                    + " : " + "<button onclick=\"setQuestionState(" + gid + "," + q.Id + ",3)\">NO</button>"
+                    + " : " + "<button onclick=\"setQuestionState(" + gid + "," + q.Id + ",4)\">CLOSE</button>";
+                }
+                    
                 root.appendChild(tag);
             }
-
-            gameRoot.appendChild(root);
-
-
+            
         }
 
 
@@ -158,10 +166,24 @@
             })
         }
 
+        function setQuestionState(gid, qid,state) {
+            $.get({
+                url: root + "/game/" + gid + "/questions/" + qid + "/state/" + state,
+                headers: {
+                    'Authorization': 'Bearer ' + $.cookie("token")
+                },
+                success: function (data) {
+                    console.log(data);
+                }
+            })
+        }
+
     </script>
 
 </head>
 <body>
+    <a href="sockets.html">SOCKETS</a>
+    <hr />
     <input type="text" id="emailInput" value="user1" />
     <input type="text" id="passwordInput" value="p" />
     <button onclick="login()">Login</button>
