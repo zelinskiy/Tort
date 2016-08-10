@@ -8,6 +8,67 @@
             crossorigin="anonymous"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
     <script>
+        var wsroot = "localhost:5000/ws";
+        var SOCKET;
+
+        function handleSockets() {
+            var webSocketProtocol = location.protocol == "https:" ? "wss:" : "ws:";
+            var webSocketURI = webSocketProtocol + "//" + wsroot;
+            socket = new WebSocket(webSocketURI);
+            socket.onopen = function () {
+                console.log("Connected.");
+            };
+            socket.onclose = function (event) {
+                if (event.wasClean) {
+                    console.log('Disconnected.');
+                } else {
+                    console.log('Connection lost.'); // for example if server processes is killed
+                }
+                console.log('Code: ' + event.code + '. Reason: ' + event.reason);
+            };
+            socket.onmessage = function (event) {
+                handleNewQuestionWS(JSON.parse(event.data));
+            };
+            socket.onerror = function (error) {
+                console.log("Error: " + error.message);
+            };
+
+            SOCKET = socket;
+        }
+
+        function newQuestionWS(gid, uid) {
+            var question = prompt("Your question:");
+            var data = JSON.stringify({
+                Text: question,
+                GameId: gid,
+                UserId: uid
+            });
+            socket.send(data);
+            $.post({
+                url: root + "/game/"+gid+"/questions/new",
+                headers: {
+                    'Authorization': 'Bearer ' + $.cookie("token")
+                },
+                contentType: "application/json",
+                data: data,
+                success: function (data) {
+                    console.log(data);
+                }
+            });
+        }
+
+        function handleNewQuestionWS(q) {
+            var gid = q.GameId;
+            console.log(q);
+            var root = document.getElementById("gameQuestions" + gid);
+            var tag = document.createElement("p");
+            tag.id = "question" + q.Id;
+            tag.innerHTML = q.Text+" : 0"
+            root.appendChild(tag);
+        }
+
+        //************************************************
+        
 
         var root = "http://localhost:5000/api";
 
@@ -62,17 +123,16 @@
                     'Authorization': 'Bearer ' + $.cookie("token")
                 },
                 success: function (data) {
-                    console.log(data);
-                    showGames(JSON.parse(data.Games));
+                    showGames(JSON.parse(data.games));
                 }
             })
         }
 
-        function showGames(games) {
-            console.log(games)            
+        function showGames(games) {     
             var root = document.getElementById("gamesList");
             root.innerHTML = "";
             
+
             if (games[0] === null) return;
             for (var i = 0; i < games.length ; i++){
                 var game = games[i];
@@ -82,31 +142,13 @@
                     + " : " + game.Name
                     + " : " + game.Condition
                     + " : " + game.Author.UserName
-                    + " : " + "<button onclick=\"getQuestions(" + game.Id + ")\">SHOW QUESTIONS</button>"
-                    + " : " + "<button onclick=\"newQuestion(" + game.Id + ")\">QUESTION</button>"
+                    //+ " : " + "<button onclick=\"getQuestions(" + game.Id + ")\">SHOW QUESTIONS</button>"
+                    + " : " + "<button onclick=\"newQuestionWS(" + game.Id +",'"+ game.Author.Id +"')\">QUESTION</button>"
                     + " : " + "<div id=\"gameQuestions" + game.Id + "\"></div>";
                 root.appendChild(tag);
+                getQuestions(game.Id);
             }
-        }
-
-        function newQuestion(gid) {
-            var question = prompt("Your question:");
-            $.post({
-                url: root + "/game/" + gid + "/questions/new",
-                headers: {
-                    'Authorization': 'Bearer ' + $.cookie("token")
-                },
-                contentType: "application/json",
-                data: JSON.stringify({
-                    Text: question,
-                    GameId: gid
-                }),
-                success: function (data) {
-                    console.log(data);                    
-                }
-            })
-        }
-
+        }        
 
         function getQuestions(gid) {
             $.get({
@@ -115,8 +157,7 @@
                     'Authorization': 'Bearer ' + $.cookie("token")
                 },
                 success: function (data) {
-                    console.log(data);
-                    showQuestions(gid, JSON.parse(data.Questions));
+                    showQuestions(gid, JSON.parse(data.questions));
                 }
             })
         }
@@ -132,14 +173,11 @@
                 tag.id = "question" + q.Id;
                 tag.innerHTML = q.Text
                     + " : " + q.State;
+                + " : " + "<button onclick=\"setQuestionState(" + q.Id + ")\"></div>"
+
                 root.appendChild(tag);
             }
-
-            gameRoot.appendChild(root);
-
-
         }
-
 
         function newGame() {
             $.post({
@@ -157,6 +195,8 @@
                 }
             })
         }
+        
+        
 
     </script>
 
@@ -179,6 +219,7 @@
     <div id="gamesList"></div>
 
     <script>
+        handleSockets();
         loadGames();
     </script>
 </body>

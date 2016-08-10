@@ -8,51 +8,69 @@ using System.Text;
 using Tort.Data;
 using System.Linq;
 using Newtonsoft.Json;
+using Tort.Models;
+using Tort.Models.GameJsonModels;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace Tort.Middleware
 {
+
+    static class Global
+    {
+        public static void SendMessagePool(string message)
+        {
+            foreach(var h in HandlersPool)
+            {
+                if (h != null)
+                {
+                    h.message = message;
+                }
+                else
+                {
+                    HandlersPool.Remove(h);
+                }                
+            }
+        }
+
+        public static List<SocketHandler> HandlersPool { get; set; } = new List<SocketHandler>();
+    }
+
     public class SocketHandler
     {
         ApplicationDbContext _context;
 
+        public string message;
+
         public const int BufferSize = 4096;
 
         WebSocket socket;
-
-        private bool hasNewMessage = false;
-
-        private object locker;
+        
 
         private SocketHandler(WebSocket socket, ApplicationDbContext context)
         {
             this.socket = socket;
             _context = context;
         }
+        
 
         private async Task SendData()
         {
             var buffer = new ArraySegment<byte>(new byte[BufferSize]);
             
             while (this.socket.State == WebSocketState.Open)
-            {
-                var data = Encoding.UTF8.GetBytes($"HELLO");                
-                buffer = new ArraySegment<byte>(data);
-                if (hasNewMessage)
+            {                
+                if (message != null)
                 {
+                    var data = Encoding.UTF8.GetBytes(message);
+                    buffer = new ArraySegment<byte>(data);
                     await socket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
-                    hasNewMessage = false;
+                    message = null;
                 }                                              
             }
         }
 
-        private async Task Fake()
-        {
-            while (true)
-            {
-                await Task.Delay(1000);
-                hasNewMessage = true;                              
-            }
-        }
+        
 
         private async Task ReceiveData()
         {
@@ -61,7 +79,10 @@ namespace Tort.Middleware
             while (this.socket.State == WebSocketState.Open)
             {
                 var incoming = await this.socket.ReceiveAsync(buffer, CancellationToken.None);
-                hasNewMessage = true;
+                if (incoming.MessageType == WebSocketMessageType.Text)
+                {
+                    Global.SendMessagePool(Encoding.UTF8.GetString(buffer.Array));
+                }                
             }
         }
 
@@ -74,7 +95,7 @@ namespace Tort.Middleware
 
             var socket = await hc.WebSockets.AcceptWebSocketAsync();
             var h = new SocketHandler(socket, context);
-            h.Fake();
+            Global.HandlersPool.Add(h);
             h.ReceiveData();
             h.SendData();            
         }

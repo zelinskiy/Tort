@@ -200,6 +200,7 @@ namespace Tort.Controllers
                     _context.Questions.Add(newQuestion);
                     await _context.SaveChangesAsync();
                     responce.Add("status", "success");
+                    responce.Add("questionId", newQuestion.Id.ToString());
                 }
                 else
                 {
