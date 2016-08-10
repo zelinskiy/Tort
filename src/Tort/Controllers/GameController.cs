@@ -147,16 +147,12 @@ namespace Tort.Controllers
                 Questions = JsonConvert.SerializeObject(
                     await _context.Questions
                         .Include(q => q.User)
-                        .Where(q=>q.Game.Id == id)
                         .ToListAsync(),
                     new JsonSerializerSettings
                     {
                         Formatting = Formatting.None,
                         ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-                    }),
-                IsMyGame = (await _context.Games
-                    .SingleOrDefaultAsync(g=>g.Id == id 
-                        && g.Author.Id == Me.Id)) != null
+                    })
             };
 
             return Json(model);
@@ -219,13 +215,12 @@ namespace Tort.Controllers
             return Json(responce);
         }
 
-        [HttpGet("{gid}/questions/{qid}/state/{state}")]
+        [HttpPut("{gid}/questions/{qid}/state/{state}")]
         public async Task<JsonResult> SetQuestionState(int gid, int qid, int state)
         {
             var responce = new Dictionary<string, string>();
 
             var game = await _context.Games
-                .Include(g=>g.Author)
                 .SingleOrDefaultAsync(g => g.Id == gid);
 
             var question = await _context.Questions
@@ -239,11 +234,6 @@ namespace Tort.Controllers
             else if(game == null)
             {
                 responce.Add("errors", $"Game {gid} not found");
-                responce.Add("status", "fail");
-            }
-            else if(game.Author.Id != Me.Id)
-            {
-                responce.Add("errors", $"Game {gid} is not created by you");
                 responce.Add("status", "fail");
             }
             else if (question == null)
