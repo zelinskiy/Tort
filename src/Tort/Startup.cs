@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Tort.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Claims;
+using System.Net.WebSockets;
+using System.Threading;
 
 namespace Tort
 {
@@ -148,6 +150,65 @@ namespace Tort
             app.UseJwtBearerAuthentication(opts);
 
             app.UseCors("MyPolicy");
+
+
+            //*******************************POLICE LINE DO NOT CROSS********************************************
+            app.UseWebSockets();
+            /*
+            app.Map("/ws", builder =>
+            {
+                builder.Use(async (context, next) =>
+                {
+                    if (context.WebSockets.IsWebSocketRequest)
+                    {
+                        var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                        byte[] buffer = new byte[1024 * 4];
+                        var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                        while (!result.CloseStatus.HasValue)
+                        {
+                            await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+                            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                        }
+                        await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+                        return;
+                    }
+                    await next();
+                });
+            });
+            */
+            /*
+            app.Use(async (http, next) =>
+            {
+                if (http.WebSockets.IsWebSocketRequest)
+                {
+                    var webSocket = await http.WebSockets.AcceptWebSocketAsync();
+                    while (webSocket.State == WebSocketState.Open)
+                    {
+                        var token = CancellationToken.None;
+                        var buffer = new ArraySegment<byte>(new Byte[4096]);
+                        var received = await webSocket.ReceiveAsync(buffer, token);
+
+                        switch (received.MessageType)
+                        {
+                            case WebSocketMessageType.Text:
+                                var request = Encoding.UTF8.GetString(buffer.Array,
+                                                        buffer.Offset,
+                                                        buffer.Count);  
+                                var type = WebSocketMessageType.Text;
+                                var data = Encoding.UTF8.GetBytes("Echo from server :" + request);
+                                buffer = new ArraySegment<Byte>(data);
+                                await webSocket.SendAsync(buffer, type, true, token);
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+                    await next();
+                }
+            });
+            */
+            //***************************************************************
 
             app.UseMvc();
         }
